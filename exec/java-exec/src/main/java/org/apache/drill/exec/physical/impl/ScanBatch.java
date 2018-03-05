@@ -50,6 +50,7 @@ import org.apache.drill.exec.testing.ControlsInjector;
 import org.apache.drill.exec.testing.ControlsInjectorFactory;
 import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.util.record.RecordBatchStats;
+import org.apache.drill.exec.util.record.RecordBatchStats.RecordBatchStatsContext;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
@@ -83,7 +84,8 @@ public class ScanBatch implements CloseableRecordBatch {
   private final BufferAllocator allocator;
   private final List<Map<String, String>> implicitColumnList;
   private String currentReaderClassName;
-  private final String batchStatsIdentifier;
+  private final RecordBatchStatsContext batchStatsLogging;
+
   /**
    *
    * @param context
@@ -121,7 +123,7 @@ public class ScanBatch implements CloseableRecordBatch {
       this.implicitColumnList = implicitColumnList;
       addImplicitVectors();
       currentReader = null;
-      batchStatsIdentifier = RecordBatchStats.generateBatchStatsIdentifier();
+      batchStatsLogging = new RecordBatchStatsContext(context, oContext);
     } finally {
       oContext.getStats().stopProcessing();
     }
@@ -297,15 +299,13 @@ public class ScanBatch implements CloseableRecordBatch {
   private void logRecordBatchStats() {
     final int MAX_FQN_LENGTH = 50;
 
-    if (recordCount == 0) {
+    if (recordCount == 0 || !batchStatsLogging.isEnableBatchSzLogging()) {
       return; // NOOP
     }
 
     final String fqn        = getFQNForLogging(MAX_FQN_LENGTH);
-    final String originator = "ScanBatch";
     final String msg        = RecordBatchStats.printRecordBatchStats(
-      batchStatsIdentifier,
-      originator,
+      batchStatsLogging.getContextOperatorId(),
       fqn,
       mutator.fieldVectorMap());
 

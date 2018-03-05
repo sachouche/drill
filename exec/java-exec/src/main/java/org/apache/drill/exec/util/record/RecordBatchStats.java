@@ -18,9 +18,14 @@
 package org.apache.drill.exec.util.record;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.drill.common.types.TypeProtos.MajorType;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.ops.FragmentContextImpl;
+import org.apache.drill.exec.ops.OperatorContext;
+import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
+import org.apache.drill.exec.proto.helper.QueryIdHelper;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.ValueVector;
 
@@ -28,28 +33,74 @@ import org.apache.drill.exec.vector.ValueVector;
  * Utility class to capture key record batch statistics.
  */
 public final class RecordBatchStats {
-  /** Identifier generator */
-  private static final AtomicLong batchStatsIdGenerator = new AtomicLong(0);
 
-  /**
-   * @return Generates a new batch statistics identifier (unique within a single Drillbit instance execution)
-   */
-  public static String generateBatchStatsIdentifier() {
-    return Long.toString(batchStatsIdGenerator.incrementAndGet());
+  /** Helper class which loads contextual record batch logging options */
+  public static final class RecordBatchStatsContext {
+    /** batch size logging for all readers */
+    private final boolean enableBatchSzLogging;
+    /** Fine grained batch size logging */
+    private final boolean enableFgBatchSzLogging;
+    /** Unique Operator Identifier */
+    private final String contextOperatorId;
+
+    /**
+     * @param options options manager
+     */
+    public RecordBatchStatsContext(FragmentContext context, OperatorContext oContext) {
+      enableBatchSzLogging   = context.getOptions().getOption(ExecConstants.STATS_LOGGING_BATCH_SZ_OPTION).bool_val;
+      enableFgBatchSzLogging = context.getOptions().getOption(ExecConstants.STATS_LOGGING_FG_BATCH_SZ_OPTION).bool_val;
+      contextOperatorId      = new StringBuilder()
+        .append(getQueryId(context))
+        .append(":")
+        .append(oContext.getStats().getId())
+        .toString();
+    }
+
+    /**
+     * @return the enableBatchSzLogging
+     */
+    public boolean isEnableBatchSzLogging() {
+      return enableBatchSzLogging || enableFgBatchSzLogging;
+    }
+
+    /**
+     * @return the enableFgBatchSzLogging
+     */
+    public boolean isEnableFgBatchSzLogging() {
+      return enableFgBatchSzLogging;
+    }
+
+    /**
+     * @return the contextOperatorId
+     */
+    public String getContextOperatorId() {
+      return contextOperatorId;
+    }
+
+    private String getQueryId(FragmentContext _context) {
+      if (_context instanceof FragmentContextImpl) {
+        final FragmentContextImpl context = (FragmentContextImpl) _context;
+        final FragmentHandle handle       = context.getHandle();
+
+        if (handle != null) {
+          return QueryIdHelper.getQueryIdentifier(handle);
+        }
+      }
+      return "NA";
+    }
+
   }
 
   /**
    * Prints batch count and memory statistics for the input record batch
    *
    * @param stats instance identifier
-   * @param originator the name of the entity which produced this record batch
    * @param sourceId optional source identifier for scanners
    * @param recordBatch a set of records
    *
    * @return a string containing the record batch statistics
    */
   public static String printRecordBatchStats(String statsId,
-    String originator,
     String sourceId,
     Map<String, ValueVector> recordBatch) {
 
@@ -67,7 +118,7 @@ public final class RecordBatchStats {
       final String fieldName = entry.getKey();
       final ValueVector v    = entry.getValue();
 
-      printFieldStats(statsId, originator, fieldName, v, fieldsMsg);
+      printFieldStats(statsId, fieldName, v, fieldsMsg);
 
       // Aggregate total counter stats
       totalAllocSize   += v.getAllocatedSize();
@@ -77,7 +128,6 @@ public final class RecordBatchStats {
 
     // Prints the aggregate record batch statistics
     printAggregateStats(statsId,
-      originator,
       sourceId,
       batchSize,
       totalAllocSize,
@@ -89,11 +139,10 @@ public final class RecordBatchStats {
   }
 
   private static void printValueVectorFieldsStatsHeaders(StringBuilder msg) {
-    msg.append("Originator\tName\tType\tAlloc-Sz\tUsed-Sz\tAvgPay-Sz\n");
+    msg.append("\tOriginator\tName\tType\tAlloc-Sz\tUsed-Sz\tAvgPay-Sz\n");
   }
 
   private static void printFieldStats(String statsId,
-    String originator,
     String fieldName,
     ValueVector v,
     StringBuilder msg) {
@@ -101,8 +150,7 @@ public final class RecordBatchStats {
     final MaterializedField field = v.getField();
     final int batchSize           = v.getAccessor().getValueCount();
 
-    msg.append(originator);
-    msg.append(':');
+    msg.append("BATCH_STATS\t");
     msg.append(statsId);
     msg.append('\t');
     msg.append(fieldName);
@@ -122,7 +170,6 @@ public final class RecordBatchStats {
   }
 
   private static void printAggregateStats(String statsId,
-    String originator,
     String sourceId,
     int batchSize,
     long totalAllocSize,
@@ -131,12 +178,10 @@ public final class RecordBatchStats {
     StringBuilder msg) {
 
     msg.append("Originator: [");
-    msg.append(originator);
-    msg.append(':');
     msg.append(statsId);
     msg.append(':');
     msg.append(sourceId);
-    msg.append("], Batch Size: [");
+    msg.append("], Num Recs: [");
     msg.append(batchSize);
     msg.append("], Total Allocated Size: [");
     msg.append(totalAllocSize);

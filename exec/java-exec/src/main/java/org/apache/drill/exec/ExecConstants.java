@@ -632,4 +632,13 @@ public final class ExecConstants {
 
   public static final String DRILL_PORT_HUNT = "drill.exec.port_hunt";
 
+  /** Enables batch size statistics logging */
+  public static final String STATS_LOGGING_BATCH_SZ_OPTION              = "drill.exec.stats.logging.batch_size";
+  public static final BooleanValidator STATS_LOGGING_BATCH_SZ_VALIDATOR = new BooleanValidator(STATS_LOGGING_BATCH_SZ_OPTION);
+
+  /** Enables fine-grained batch size statistics logging */
+  public static final String STATS_LOGGING_FG_BATCH_SZ_OPTION              = "drill.exec.stats.logging.fine_grained.batch_sz";
+  public static final BooleanValidator STATS_LOGGING_BATCH_FG_SZ_VALIDATOR = new BooleanValidator(STATS_LOGGING_FG_BATCH_SZ_OPTION);
+
+
 }
