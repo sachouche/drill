@@ -643,4 +643,12 @@ public final class ExecConstants {
 
   public static final String ALLOW_LOOPBACK_ADDRESS_BINDING = "drill.exec.allow_loopback_address_binding";
 
+  /** Enables batch size statistics logging */
+  public static final String STATS_LOGGING_BATCH_SZ_OPTION              = "drill.exec.stats.logging.batch_sz";
+  public static final BooleanValidator STATS_LOGGING_BATCH_SZ_VALIDATOR = new BooleanValidator(STATS_LOGGING_BATCH_SZ_OPTION);
+
+  /** Enables fine-grained batch size statistics logging */
+  public static final String STATS_LOGGING_FG_BATCH_SZ_OPTION              = "drill.exec.stats.logging.fine_grained.batch_sz";
+  public static final BooleanValidator STATS_LOGGING_BATCH_FG_SZ_VALIDATOR = new BooleanValidator(STATS_LOGGING_FG_BATCH_SZ_OPTION);
+
 }

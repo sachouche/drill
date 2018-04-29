@@ -216,6 +216,8 @@ public class SystemOptionManager extends BaseOptionManager implements AutoClosea
       new OptionDefinition(ExecConstants.ENABLE_ITERATOR_VALIDATOR),
       new OptionDefinition(ExecConstants.OUTPUT_BATCH_SIZE_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.SYSTEM, true, false)),
       new OptionDefinition(ExecConstants.FRAG_RUNNER_RPC_TIMEOUT_VALIDATOR, new OptionMetaData(OptionValue.AccessibleScopes.SYSTEM, true, true)),
+      new OptionDefinition(ExecConstants.STATS_LOGGING_BATCH_SZ_VALIDATOR),
+      new OptionDefinition(ExecConstants.STATS_LOGGING_BATCH_FG_SZ_VALIDATOR),
     };
 
     final CaseInsensitiveMap<OptionDefinition> map = CaseInsensitiveMap.newHashMap();
